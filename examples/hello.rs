@@ -3,6 +3,7 @@ extern crate winit;
 
 use hublot::geom::IRect;
 use hublot::render;
+use hublot::{color, Color};
 
 
 fn main() {
@@ -29,7 +30,7 @@ fn main() {
         render_thread.frame(render::Frame::new(
             window.id(),
             IRect::new(0, 0, size.0 as _, size.1 as _),
-            Some([0.8f32, 0.5f32, 0.6f32, 1f32]),
+            Some(Color::from(color::CssName::CornSilk)),
         ));
 
         match event {

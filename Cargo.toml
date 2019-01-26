@@ -7,4 +7,5 @@ edition = "2018"
 [dependencies]
 gfx-hal = { path="gfx/src/hal" }
 gfx-backend-vulkan = { path="gfx/src/backend/vulkan", features=[] }
+lazy_static = "1.2.0"
 winit = { version="0.18.1" }

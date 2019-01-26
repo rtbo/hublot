@@ -233,7 +233,7 @@ impl Renderer {
                     cmd.clear_image(
                         &image.image,
                         hal::image::Layout::TransferDstOptimal,
-                        hal::command::ClearColor::Float(cc),
+                        hal::command::ClearColor::Float(cc.into()),
                         hal::command::ClearDepthStencil(0f32, 0),
                         &[subrange],
                     );
