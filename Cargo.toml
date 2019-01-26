@@ -1,0 +1,10 @@
+[package]
+name = "hublot"
+version = "0.1.0"
+authors = ["Remi Thebault <remi.thebault@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+gfx-hal = { path="gfx/src/hal" }
+gfx-backend-vulkan = { path="gfx/src/backend/vulkan", features=[] }
+winit = { version="0.18.1" }
