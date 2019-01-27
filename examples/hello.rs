@@ -1,10 +1,8 @@
 extern crate hublot;
 extern crate winit;
 
-use hublot::geom::IRect;
 use hublot::render;
-use hublot::{color, Color};
-
+use hublot::{color, Color, UserInterface};
 
 fn main() {
     let mut events_loop = winit::EventsLoop::new();
@@ -15,23 +13,15 @@ fn main() {
         .build(&events_loop)
         .unwrap();
 
+    let ui = UserInterface::new_with_color(Color::from(color::CssName::CadetBlue));
+
     let render_thread = render::Thread::new(Some(&window));
 
     // spawn the render thread
     events_loop.run_forever(|event| {
         println!("received event: {:?}", event);
 
-        let size: (u32, u32) = window
-            .get_inner_size()
-            .map(|s| s.to_physical(window.get_hidpi_factor()))
-            .unwrap()
-            .into();
-
-        render_thread.frame(render::Frame::new(
-            window.id(),
-            IRect::new(0, 0, size.0 as _, size.1 as _),
-            Some(Color::from(color::CssName::CornSilk)),
-        ));
+        render_thread.frame(ui.frame(&window));
 
         match event {
             winit::Event::WindowEvent { event: winit::WindowEvent::CloseRequested, .. } => {

@@ -9,5 +9,7 @@ pub mod color;
 pub mod geom;
 pub mod gfx;
 pub mod render;
+pub mod ui;
 
 pub use color::Color;
+pub use ui::UserInterface;
