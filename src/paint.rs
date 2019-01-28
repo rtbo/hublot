@@ -1,11 +1,10 @@
-
 use crate::Color;
 
 pub mod gradient {
     use crate::Color;
 
     /// A control stop for color gradients
-    pub struct Stop (pub f32, pub Color);
+    pub struct Stop(pub f32, pub Color);
 
     /// Direction of a linear gradient
     pub enum Direction {

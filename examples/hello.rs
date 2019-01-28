@@ -24,9 +24,10 @@ fn main() {
         render_thread.frame(ui.frame(&window));
 
         match event {
-            winit::Event::WindowEvent { event: winit::WindowEvent::CloseRequested, .. } => {
-                winit::ControlFlow::Break
-            }
+            winit::Event::WindowEvent {
+                event: winit::WindowEvent::CloseRequested,
+                ..
+            } => winit::ControlFlow::Break,
             _ => winit::ControlFlow::Continue,
         }
     });

@@ -40,9 +40,7 @@ impl Color {
         )
     }
     pub fn from_name<S: AsRef<str>>(name: S) -> Option<Color> {
-        CSS_NAMES
-            .get(name.as_ref())
-            .map(|&name| Color::from(name))
+        CSS_NAMES.get(name.as_ref()).map(|&name| Color::from(name))
     }
     #[inline]
     pub fn red(&self) -> u8 {

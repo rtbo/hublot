@@ -1,5 +1,5 @@
-extern crate gfx_hal as hal;
 extern crate gfx_backend_vulkan as gfx_back;
+extern crate gfx_hal as hal;
 extern crate winit;
 
 #[macro_use]
