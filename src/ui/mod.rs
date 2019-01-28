@@ -1,6 +1,7 @@
 use crate::geom::IRect;
 use crate::render;
 use crate::Color;
+use std::rc::Rc;
 use winit::Window;
 
 pub struct UserInterface {
@@ -8,14 +9,14 @@ pub struct UserInterface {
 }
 
 impl UserInterface {
-    pub fn new() -> UserInterface {
-        UserInterface { clear_color: None }
+    pub fn new() -> Rc<UserInterface> {
+        Rc::new(UserInterface { clear_color: None })
     }
 
-    pub fn new_with_color(color: Color) -> UserInterface {
-        UserInterface {
+    pub fn new_with_color(color: Color) -> Rc<UserInterface> {
+        Rc::new(UserInterface {
             clear_color: Some(color),
-        }
+        })
     }
 
     pub fn frame(&self, win: &Window) -> render::Frame {
@@ -28,6 +29,7 @@ impl UserInterface {
             win.id(),
             IRect::new(0, 0, size.0 as _, size.1 as _),
             self.clear_color,
+            None,
         )
     }
 }
