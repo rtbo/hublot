@@ -4,6 +4,8 @@ extern crate winit;
 
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate bitflags;
 
 pub mod color;
 pub mod geom;

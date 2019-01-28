@@ -5,6 +5,7 @@ authors = ["Remi Thebault <remi.thebault@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+bitflags = "1.0"
 gfx-hal = { path="gfx/src/hal" }
 gfx-backend-vulkan = { path="gfx/src/backend/vulkan", features=[] }
 lazy_static = "1.2.0"
