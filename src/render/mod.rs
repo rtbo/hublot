@@ -6,7 +6,7 @@ use std::sync::{mpsc, Arc};
 use std::thread;
 use winit::{self, dpi::PhysicalSize, WindowId};
 
-mod frame;
+pub mod frame;
 
 pub use frame::Frame;
 
