@@ -1,5 +1,6 @@
 
 use crate::Color;
+use crate::geom::{FRect, FSize};
 use crate::render::frame;
 use crate::ui::{view, View};
 
@@ -8,15 +9,25 @@ pub struct Label {
     _color: Color,
 }
 
-impl View for Label {
-    fn measure(&mut self) {}
-    fn layout(&mut self) {}
+impl view::View for Label {}
+
+impl view::Leaf for Label {}
+
+impl view::Measured for Label {
+    fn measure(&self, _specs: [view::MeasureSpec; 2]) -> FSize {
+        FSize::new(0f32, 0f32)
+    }
+}
+
+impl view::LaidOut for Label {
+    fn layout(&mut self, _rect: FRect) {}
+}
+
+impl view::FrameRendered for Label {
     fn frame(&self) -> Option<frame::Node> {
         None
     }
 }
-
-impl view::Leaf for Label {}
 
 impl view::Base for Label {
     type State = ();

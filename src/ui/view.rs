@@ -4,11 +4,34 @@ use crate::render::frame;
 // use std::iter;
 use std::slice;
 
-/// The View trait is intended for trait objects
-pub trait View {
-    fn measure(&mut self);
-    fn layout(&mut self);
+/// Specify how a View should measure itself
+#[derive(Clone, Copy, Debug)]
+pub enum MeasureSpec {
+    Unspecified,
+    AtMost(f32),
+    Exactly(f32),
+}
+
+/// Trait for objects that can be measured
+pub trait Measured {
+    /// Measure the object according to spec and return the size
+    fn measure(&self, spec: [MeasureSpec; 2]) -> FSize;
+}
+
+/// Trait for objects that can layout themselves
+pub trait LaidOut {
+    /// Lay the object out in the given rect
+    fn layout(&mut self, rect: FRect);
+}
+
+/// Trait for objects that can render themselves in a framegraph node
+pub trait FrameRendered {
+    /// Render the object in a frame graph node
     fn frame(&self) -> Option<frame::Node>;
+}
+
+/// The View trait represent a single or composed view in a view tree.
+pub trait View : Measured + LaidOut + FrameRendered {
 }
 
 pub trait Parent<'a> {
