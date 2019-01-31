@@ -108,3 +108,15 @@ impl<T: Copy> Margins<T> {
         }
     }
 }
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct Transform ([f32; 6]);
+
+impl Transform {
+    pub fn identity() -> Transform {
+        Transform([
+            1f32, 0f32, 0f32,
+            0f32, 1f32, 0f32,
+        ])
+    }
+}
