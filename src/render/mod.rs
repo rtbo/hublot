@@ -6,7 +6,7 @@ use std::sync::{mpsc, Arc};
 use std::thread;
 use winit::{self, dpi::PhysicalSize, WindowId};
 
-mod frame;
+pub mod frame;
 
 pub use frame::Frame;
 
@@ -97,8 +97,8 @@ impl Thread {
 enum Msg {
     WindowAdd(WindowInfo),
     WindowRemove(WindowId),
-    Frame(frame::Frame),
-    Frames(Vec<frame::Frame>),
+    Frame(Frame),
+    Frames(Vec<Frame>),
     Exit,
 }
 
@@ -121,7 +121,9 @@ fn render_loop(instance: Arc<gfx::Instance>, windows: Vec<WindowInfo>, rx: mpsc:
             Msg::Frame(frame) => {
                 renderer.frame(frame);
             }
-            Msg::Frames(_) => {}
+            Msg::Frames(frames) => {
+                renderer.frames(frames);
+            }
             Msg::Exit => {
                 break;
             }
@@ -195,7 +197,7 @@ impl Renderer {
 
     fn window_remove(&mut self, _id: WindowId) {}
 
-    fn frame(&mut self, frame: frame::Frame) {
+    fn frame(&mut self, frame: Frame) {
         let w = self
             .windows
             .iter_mut()
@@ -256,6 +258,12 @@ impl Renderer {
                     w.must_rebuild = true;
                 }
             },
+        }
+    }
+
+    fn frames(&mut self, frames: Vec<Frame>) {
+        for f in frames {
+            self.frame(f);
         }
     }
 }
