@@ -8,6 +8,7 @@ extern crate lazy_static;
 extern crate bitflags;
 
 pub mod color;
+pub mod event_loop;
 pub mod geom;
 pub mod gfx;
 pub mod paint;
