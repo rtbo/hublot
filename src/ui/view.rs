@@ -1,8 +1,13 @@
-use crate::geom::{FRect, FSize, Transform};
+use crate::geom::{FPoint, FRect, FSize, Transform};
 use crate::render::frame;
 
 // use std::iter;
 use std::slice;
+
+/// The View trait represent a single or composed view in a view tree.
+/// The View trait is object safe.
+pub trait View : Measured + LaidOut + FrameRendered + HasRect {
+}
 
 /// Specify how a View should measure itself
 #[derive(Clone, Copy, Debug)]
@@ -30,9 +35,36 @@ pub trait FrameRendered {
     fn frame(&self) -> Option<frame::Node>;
 }
 
-/// The View trait represent a single or composed view in a view tree.
-pub trait View : Measured + LaidOut + FrameRendered {
+/// Object that has an assigned Rect within its parent
+pub trait HasRect {
+    /// the rect within its parent
+    fn rect(&self) -> FRect;
 }
+
+/// Object that has an assigned position within its parent
+pub trait HasPosition {
+    /// the position within its parent
+    fn position(&self) -> FPoint;
+}
+
+/// Object that has an assigned size
+pub trait HasSize {
+    /// the size of the view
+    fn size(&self) -> FSize;
+}
+
+impl<T: HasRect> HasPosition for T {
+    fn position(&self) -> FPoint {
+        self.rect().point()
+    }
+}
+
+impl<T: HasRect> HasSize for T {
+    fn size(&self) -> FSize {
+        self.rect().size()
+    }
+}
+
 
 pub trait Parent<'a> {
     type Children: IntoIterator<Item = &'a dyn View>;
@@ -42,6 +74,7 @@ pub trait Parent<'a> {
     fn children_mut(&'a mut self) -> Self::ChildrenMut;
 }
 
+/// A View without children
 pub trait Leaf {}
 
 // impl<'a, T: Leaf> Parent<'a> for T {
@@ -115,17 +148,21 @@ pub trait Base: View {
 }
 
 pub struct Common {
-    _measurement: FSize,
-    _rect: FRect,
-    _transform: Transform,
+    pub rect: FRect,
+    pub transform: Transform,
+}
+
+impl<T: Base> HasRect for T {
+    fn rect(&self) -> FRect {
+        self.common().rect
+    }
 }
 
 impl Default for Common {
     fn default() -> Common {
         Common {
-            _measurement: FSize::new(0f32, 0f32),
-            _rect: FRect::new(0f32, 0f32, 0f32, 0f32),
-            _transform: Transform::identity(),
+            rect: FRect::new(0f32, 0f32, 0f32, 0f32),
+            transform: Transform::identity(),
         }
     }
 }

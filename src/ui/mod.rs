@@ -5,6 +5,7 @@ use std::cell::Cell;
 use winit::Window;
 
 pub mod label;
+pub mod layout;
 pub mod view;
 
 pub use label::Label;
