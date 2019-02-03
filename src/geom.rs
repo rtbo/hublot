@@ -1,5 +1,10 @@
+use std::ops::{Add, Sub};
+
 pub type FPoint = Point<f32>;
 pub type IPoint = Point<i32>;
+
+pub type FVec = Vec<f32>;
+pub type IVec = Vec<i32>;
 
 pub type FSize = Size<f32>;
 pub type ISize = Size<i32>;
@@ -11,26 +16,88 @@ pub type FMargins = Margins<f32>;
 pub type IMargins = Margins<i32>;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct Point<T: Copy> {
-    pub x: T,
-    pub y: T,
-}
+pub struct Point<T>(pub T, pub T);
 
 impl<T: Copy> Point<T> {
-    pub fn new(x: T, y: T) -> Point<T> {
-        Point { x: x, y: y }
+    pub fn x(&self) -> T {
+        self.0
+    }
+    pub fn y(&self) -> T {
+        self.0
+    }
+}
+
+impl From<FPoint> for [f32; 2] {
+    fn from(val: FPoint) -> Self {
+        [val.0, val.1]
+    }
+}
+
+impl From<IPoint> for [i32; 2] {
+    fn from(val: IPoint) -> Self {
+        [val.0, val.1]
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct Size<T: Copy> {
-    pub w: T,
-    pub h: T,
+pub struct Vec<T>(pub T, pub T);
+
+impl<T: Copy> Vec<T> {
+    pub fn x(&self) -> T {
+        self.0
+    }
+    pub fn y(&self) -> T {
+        self.0
+    }
 }
 
+impl From<FVec> for [f32; 2] {
+    fn from(val: FVec) -> Self {
+        [val.0, val.1]
+    }
+}
+
+impl From<IVec> for [i32; 2] {
+    fn from(val: IVec) -> Self {
+        [val.0, val.1]
+    }
+}
+
+impl<T: Add<Output=T>> Add for Vec<T> {
+    type Output = Vec<T>;
+    fn add(self, other: Vec<T>) -> Vec<T> {
+        Vec(self.0 + other.0, self.1 + other.1)
+    }
+}
+
+impl<T: Add<Output=T>> Add<Vec<T>> for Point<T> {
+    type Output = Point<T>;
+    fn add(self, other: Vec<T>) -> Point<T> {
+        Point(self.0 + other.0, self.1 + other.1)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub struct Size<T: Copy>(pub T, pub T);
+
 impl<T: Copy> Size<T> {
-    pub fn new(w: T, h: T) -> Size<T> {
-        Size { w: w, h: h }
+    pub fn width(&self) -> T {
+        self.0
+    }
+    pub fn height(&self) -> T {
+        self.1
+    }
+}
+
+impl From<FSize> for [f32; 2] {
+    fn from(val: FSize) -> Self {
+        [val.0, val.1]
+    }
+}
+
+impl From<ISize> for [i32; 2] {
+    fn from(val: ISize) -> Self {
+        [val.0, val.1]
     }
 }
 
@@ -38,85 +105,133 @@ impl<T: Copy> Size<T> {
 pub struct Rect<T: Copy> {
     pub x: T,
     pub y: T,
-    pub w: T,
-    pub h: T,
+    pub width: T,
+    pub height: T,
 }
 
-impl<T: Copy> Rect<T> {
-    pub fn new(x: T, y: T, w: T, h: T) -> Rect<T> {
+impl<T> Rect<T>
+where
+    T: Copy,
+    T: Add<Output = T>,
+{
+    pub fn new(x: T, y: T, width: T, height: T) -> Rect<T> {
         Rect {
-            x: x,
-            y: y,
-            w: w,
-            h: h,
+            x,
+            y,
+            width,
+            height,
         }
     }
     pub fn new_s(x: T, y: T, size: Size<T>) -> Rect<T> {
         Rect {
-            x: x,
-            y: y,
-            w: size.w,
-            h: size.h,
+            x,
+            y,
+            width: size.0,
+            height: size.1,
         }
     }
-    pub fn new_p(point: Point<T>, w: T, h: T) -> Rect<T> {
+    pub fn new_p(point: Point<T>, width: T, height: T) -> Rect<T> {
         Rect {
-            x: point.x,
-            y: point.y,
-            w: w,
-            h: h,
+            x: point.0,
+            y: point.1,
+            width,
+            height,
         }
     }
     pub fn new_ps(point: Point<T>, size: Size<T>) -> Rect<T> {
         Rect {
-            x: point.x,
-            y: point.y,
-            w: size.w,
-            h: size.h,
+            x: point.0,
+            y: point.1,
+            width: size.0,
+            height: size.1,
         }
     }
 
     pub fn point(&self) -> Point<T> {
-        Point {
-            x: self.x,
-            y: self.y,
-        }
+        Point(self.x, self.y)
     }
     pub fn size(&self) -> Size<T> {
-        Size {
-            w: self.w,
-            h: self.h,
-        }
+        Size(self.width, self.height)
+    }
+    pub fn left(&self) -> T {
+        self.x
+    }
+    pub fn top(&self) -> T {
+        self.y
+    }
+    pub fn right(&self) -> T {
+        self.x + self.width
+    }
+    pub fn bottom(&self) -> T {
+        self.y + self.height
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct Margins<T: Copy> {
-    pub l: T,
-    pub r: T,
-    pub t: T,
-    pub b: T,
+pub struct Margins<T>(pub T, pub T, pub T, pub T);
+
+impl<T: Copy + Add<Output=T>> Margins<T> {
+    pub fn left(&self) -> T {
+        self.0
+    }
+    pub fn top(&self) -> T {
+        self.1
+    }
+    pub fn right(&self) -> T {
+        self.2
+    }
+    pub fn bottom(&self) -> T {
+        self.3
+    }
+    pub fn horizontal(&self) -> T {
+        self.0 + self.2
+    }
+    pub fn vertical(&self) -> T {
+        self.1 + self.3
+    }
 }
 
-impl<T: Copy> Margins<T> {
-    pub fn new(l: T, r: T, t: T, b: T) -> Margins<T> {
-        Margins {
-            l: l,
-            r: r,
-            t: t,
-            b: b,
+impl From<FMargins> for [f32; 4] {
+    fn from(val: FMargins) -> Self {
+        [val.0, val.1, val.2, val.3]
+    }
+}
+
+impl From<IMargins> for [i32; 4] {
+    fn from(val: IMargins) -> Self {
+        [val.0, val.1, val.2, val.3]
+    }
+}
+
+impl<T: Copy + Add<Output=T> + Sub<Output=T>> Add<Margins<T>> for Rect<T> {
+    type Output = Rect<T>;
+    fn add(self, rhs: Margins<T>) -> Rect<T> {
+        Rect {
+            x: self.x - rhs.left(),
+            y: self.y - rhs.top(),
+            width: self.width + rhs.horizontal(),
+            height: self.height + rhs.vertical(),
+        }
+    }
+}
+
+impl<T: Copy + Add<Output=T> + Sub<Output=T>> Sub<Margins<T>> for Rect<T> {
+    type Output = Rect<T>;
+    fn sub(self, rhs: Margins<T>) -> Rect<T> {
+        Rect {
+            x: self.x + rhs.left(),
+            y: self.y + rhs.top(),
+            width: self.width - rhs.horizontal(),
+            height: self.height + rhs.vertical(),
         }
     }
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Transform ([f32; 6]);
+pub struct Transform([f32; 6]);
 
 impl Transform {
     pub fn identity() -> Transform {
-        Transform([
-            1f32, 0f32, 0f32,
-            0f32, 1f32, 0f32,
-        ])
+        Transform([1f32, 0f32, 0f32, 0f32, 1f32, 0f32])
     }
 }
