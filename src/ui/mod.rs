@@ -17,7 +17,7 @@ pub struct UserInterface {
 }
 
 impl UserInterface {
-    pub fn new() ->UserInterface {
+    pub fn new() -> UserInterface {
         UserInterface {
             clear_color: None,
             dirty: Cell::new(Dirty::all()),
@@ -36,13 +36,9 @@ impl UserInterface {
         self.dirty.get().contains(flags)
     }
 
-    pub fn layout(&mut self) {
+    pub fn layout(&mut self) {}
 
-    }
-
-    pub fn style(&mut self) {
-
-    }
+    pub fn style(&mut self) {}
 
     pub fn frame(&self, win: &Window) -> render::Frame {
         self.remove_dirty(Dirty::FRAME);
@@ -72,7 +68,7 @@ impl UserInterface {
     }
 }
 
-bitflags!{
+bitflags! {
     pub struct Dirty : u32 {
         const LAYOUT = 1;
         const STYLE  = 2;

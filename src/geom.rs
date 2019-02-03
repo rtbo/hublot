@@ -63,14 +63,14 @@ impl From<IVec> for [i32; 2] {
     }
 }
 
-impl<T: Add<Output=T>> Add for Vec<T> {
+impl<T: Add<Output = T>> Add for Vec<T> {
     type Output = Vec<T>;
     fn add(self, other: Vec<T>) -> Vec<T> {
         Vec(self.0 + other.0, self.1 + other.1)
     }
 }
 
-impl<T: Add<Output=T>> Add<Vec<T>> for Point<T> {
+impl<T: Add<Output = T>> Add<Vec<T>> for Point<T> {
     type Output = Point<T>;
     fn add(self, other: Vec<T>) -> Point<T> {
         Point(self.0 + other.0, self.1 + other.1)
@@ -170,7 +170,7 @@ where
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Margins<T>(pub T, pub T, pub T, pub T);
 
-impl<T: Copy + Add<Output=T>> Margins<T> {
+impl<T: Copy + Add<Output = T>> Margins<T> {
     pub fn left(&self) -> T {
         self.0
     }
@@ -203,7 +203,7 @@ impl From<IMargins> for [i32; 4] {
     }
 }
 
-impl<T: Copy + Add<Output=T> + Sub<Output=T>> Add<Margins<T>> for Rect<T> {
+impl<T: Copy + Add<Output = T> + Sub<Output = T>> Add<Margins<T>> for Rect<T> {
     type Output = Rect<T>;
     fn add(self, rhs: Margins<T>) -> Rect<T> {
         Rect {
@@ -215,7 +215,7 @@ impl<T: Copy + Add<Output=T> + Sub<Output=T>> Add<Margins<T>> for Rect<T> {
     }
 }
 
-impl<T: Copy + Add<Output=T> + Sub<Output=T>> Sub<Margins<T>> for Rect<T> {
+impl<T: Copy + Add<Output = T> + Sub<Output = T>> Sub<Margins<T>> for Rect<T> {
     type Output = Rect<T>;
     fn sub(self, rhs: Margins<T>) -> Rect<T> {
         Rect {

@@ -1,9 +1,8 @@
-
-use crate::{color, Color};
-use crate::Paint;
-use crate::geom::{FRect};
+use crate::geom::FRect;
 use crate::render::frame;
 use crate::ui::view::{self, HasRect, MeasureSpec, View};
+use crate::Paint;
+use crate::{color, Color};
 
 /// A view that can display text or image
 #[derive(Debug)]
@@ -35,9 +34,7 @@ impl View for Label {}
 impl view::Leaf for Label {}
 
 impl view::Measure for Label {
-    fn measure(&mut self, _specs: [MeasureSpec; 2]) {
-
-    }
+    fn measure(&mut self, _specs: [MeasureSpec; 2]) {}
 }
 
 impl view::Layout for Label {
@@ -46,7 +43,7 @@ impl view::Layout for Label {
 
 impl view::FrameRender for Label {
     fn frame_render(&self) -> Option<frame::Node> {
-        Some(frame::Node::Rect{
+        Some(frame::Node::Rect {
             rect: self.rect(),
             paint: Paint::Solid(self.color),
             radius: 0f32,

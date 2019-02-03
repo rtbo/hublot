@@ -7,10 +7,7 @@ use std::slice;
 
 /// The View trait represent a single or composed view in a view tree.
 /// The View trait is object safe.
-pub trait View:
-    Debug + Measure + Layout + FrameRender + HasRect + HasPadding + HasMargins
-{
-}
+pub trait View: Debug + Measure + Layout + FrameRender + HasRect + HasPadding + HasMargins {}
 
 /// Specify how a View should measure itself
 #[derive(Clone, Copy, Debug)]
