@@ -35,7 +35,7 @@ impl View for Label {}
 impl view::Leaf for Label {}
 
 impl view::Measure for Label {
-    fn measure(&mut self, specs: [MeasureSpec; 2]) {
+    fn measure(&mut self, _specs: [MeasureSpec; 2]) {
 
     }
 }

@@ -1,7 +1,7 @@
 use crate::geom::{FMargins, FRect, Margins, Size};
 use crate::render::frame;
 use crate::ui::view::Base;
-use crate::ui::view::{self, HasMargins, HasPadding, HasSize, MeasureSpec};
+use crate::ui::view::{self, HasMargins, HasPadding, MeasureSpec};
 use crate::ui::View;
 
 use std::cell::Cell;
@@ -67,10 +67,6 @@ mod grav {
     pub const CLIP: u8 = 0x08;
     /// Mask for the gravity of one axis
     pub const MASK: u8 = 0x0f;
-    /// ditto
-    pub const MASK_HOR: u8 = 0x0f;
-    /// ditto
-    pub const MASK_VER: u8 = 0xf0;
     /// Shift value to apply to get the the horizontal gravity
     pub const SHIFT_HOR: u8 = 0;
     /// Shift value to apply to get the the vertical gravity
