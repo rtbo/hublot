@@ -1,12 +1,15 @@
-use crate::geom::{FPoint, FRect, FSize, Transform};
+use crate::geom::{FMargins, FPoint, FRect, FSize, Margins, Size, Transform};
 use crate::render::frame;
 
+use std::fmt::Debug;
 // use std::iter;
 use std::slice;
 
 /// The View trait represent a single or composed view in a view tree.
 /// The View trait is object safe.
-pub trait View : Measured + LaidOut + FrameRendered + HasRect {
+pub trait View:
+    Debug + Measure + Layout + FrameRender + HasRect + HasPadding + HasMargins
+{
 }
 
 /// Specify how a View should measure itself
@@ -17,22 +20,28 @@ pub enum MeasureSpec {
     Exactly(f32),
 }
 
+/// Trait for object that store measurement
+pub trait Measurement {
+    /// Get the stored measurement
+    fn measurement(&self) -> FSize;
+}
+
 /// Trait for objects that can be measured
-pub trait Measured {
-    /// Measure the object according to spec and return the size
-    fn measure(&self, spec: [MeasureSpec; 2]) -> FSize;
+pub trait Measure: Measurement {
+    /// Measure the object according to spec and store the measurement
+    fn measure(&mut self, spec: [MeasureSpec; 2]);
 }
 
 /// Trait for objects that can layout themselves
-pub trait LaidOut {
+pub trait Layout {
     /// Lay the object out in the given rect
     fn layout(&mut self, rect: FRect);
 }
 
 /// Trait for objects that can render themselves in a framegraph node
-pub trait FrameRendered {
+pub trait FrameRender {
     /// Render the object in a frame graph node
-    fn frame(&self) -> Option<frame::Node>;
+    fn frame_render(&self) -> Option<frame::Node>;
 }
 
 /// Object that has an assigned Rect within its parent
@@ -53,6 +62,16 @@ pub trait HasSize {
     fn size(&self) -> FSize;
 }
 
+/// View that has margins
+pub trait HasMargins {
+    fn margins(&self) -> FMargins; // left, top, right, bottom
+}
+
+/// View that has padding
+pub trait HasPadding {
+    fn padding(&self) -> FMargins; // left, top, right, bottom
+}
+
 impl<T: HasRect> HasPosition for T {
     fn position(&self) -> FPoint {
         self.rect().point()
@@ -64,7 +83,6 @@ impl<T: HasRect> HasSize for T {
         self.rect().size()
     }
 }
-
 
 pub trait Parent<'a> {
     type Children: IntoIterator<Item = &'a dyn View>;
@@ -115,26 +133,23 @@ impl<'a> Iterator for ChildrenIterMut<'a> {
         //self.iter.next().map(|boxed| &mut **boxed)
         match self.iter.next() {
             None => None,
-            Some(boxed) => {
-                Some(&mut **boxed)
-            }
+            Some(boxed) => Some(&mut **boxed),
         }
     }
 }
 
-impl<'a, T: SliceParent> Parent<'a> for T
-{
+impl<'a, T: SliceParent> Parent<'a> for T {
     type Children = ChildrenIter<'a>;
     type ChildrenMut = ChildrenIterMut<'a>;
 
     fn children(&'a self) -> Self::Children {
         ChildrenIter {
-            iter: self.children_slice().iter()
+            iter: self.children_slice().iter(),
         }
     }
     fn children_mut(&'a mut self) -> Self::ChildrenMut {
         ChildrenIterMut {
-            iter: self.children_slice_mut().iter_mut()
+            iter: self.children_slice_mut().iter_mut(),
         }
     }
 }
@@ -145,11 +160,25 @@ pub trait Base: View {
 
     fn common(&self) -> &Common;
     fn common_mut(&mut self) -> &mut Common;
+
+    fn set_measurement(&mut self, size: FSize) {
+        self.common_mut().measurement = size;
+    }
 }
 
+#[derive(Debug)]
 pub struct Common {
+    pub measurement: FSize,
     pub rect: FRect,
+    pub padding: FMargins,
+    pub margins: FMargins,
     pub transform: Transform,
+}
+
+impl<T: Base> Measurement for T {
+    fn measurement(&self) -> FSize {
+        self.common().measurement
+    }
 }
 
 impl<T: Base> HasRect for T {
@@ -158,10 +187,25 @@ impl<T: Base> HasRect for T {
     }
 }
 
+impl<T: Base> HasPadding for T {
+    fn padding(&self) -> FMargins {
+        self.common().padding
+    }
+}
+
+impl<T: Base> HasMargins for T {
+    fn margins(&self) -> FMargins {
+        self.common().margins
+    }
+}
+
 impl Default for Common {
     fn default() -> Common {
         Common {
+            measurement: Size(0f32, 0f32),
             rect: FRect::new(0f32, 0f32, 0f32, 0f32),
+            padding: Margins(0f32, 0f32, 0f32, 0f32),
+            margins: Margins(0f32, 0f32, 0f32, 0f32),
             transform: Transform::identity(),
         }
     }

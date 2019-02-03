@@ -1,11 +1,12 @@
 
 use crate::{color, Color};
 use crate::Paint;
-use crate::geom::{FRect, FSize};
+use crate::geom::{FRect};
 use crate::render::frame;
 use crate::ui::view::{self, HasRect, MeasureSpec, View};
 
 /// A view that can display text or image
+#[derive(Debug)]
 pub struct Label {
     common: view::Common,
     color: Color,
@@ -33,18 +34,18 @@ impl View for Label {}
 
 impl view::Leaf for Label {}
 
-impl view::Measured for Label {
-    fn measure(&self, _specs: [MeasureSpec; 2]) -> FSize {
-        FSize::new(100f32, 50f32)
+impl view::Measure for Label {
+    fn measure(&mut self, specs: [MeasureSpec; 2]) {
+
     }
 }
 
-impl view::LaidOut for Label {
+impl view::Layout for Label {
     fn layout(&mut self, _rect: FRect) {}
 }
 
-impl view::FrameRendered for Label {
-    fn frame(&self) -> Option<frame::Node> {
+impl view::FrameRender for Label {
+    fn frame_render(&self) -> Option<frame::Node> {
         Some(frame::Node::Rect{
             rect: self.rect(),
             paint: Paint::Solid(self.color),
