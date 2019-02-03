@@ -9,9 +9,11 @@ pub mod layout;
 pub mod view;
 
 pub use label::Label;
+pub use layout::LinearLayout;
 pub use view::View;
 
 pub struct UserInterface {
+    root: Option<Box<dyn View>>,
     clear_color: Option<Color>,
     dirty: Cell<Dirty>,
 }
@@ -19,6 +21,7 @@ pub struct UserInterface {
 impl UserInterface {
     pub fn new() -> UserInterface {
         UserInterface {
+            root: None,
             clear_color: None,
             dirty: Cell::new(Dirty::all()),
         }
@@ -26,9 +29,15 @@ impl UserInterface {
 
     pub fn new_with_color(color: Color) -> UserInterface {
         UserInterface {
+            root: None,
             clear_color: Some(color),
             dirty: Cell::new(Dirty::all()),
         }
+    }
+
+    pub fn set_root(&mut self, root: Option<Box<dyn View>>) {
+        self.root = root;
+        self.add_dirty(Dirty::LAYOUT | Dirty::STYLE | Dirty::FRAME);
     }
 
     /// Checks whether all given dirty flags are set
@@ -55,7 +64,7 @@ impl UserInterface {
         )
     }
 
-    fn _add_dirty(&self, flags: Dirty) {
+    fn add_dirty(&self, flags: Dirty) {
         let mut dirty = self.dirty.get();
         dirty.insert(flags);
         self.dirty.set(dirty);

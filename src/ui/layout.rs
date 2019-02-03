@@ -201,6 +201,22 @@ impl LinearLayout {
     pub fn add_view(&mut self, view: Box<dyn View>) {
         self.views.push(view)
     }
+
+    pub fn gravity(&self) -> Gravity {
+        self.gravity
+    }
+
+    pub fn set_gravity(&mut self, gravity: Gravity) {
+        self.gravity = gravity;
+    }
+
+    pub fn spacing(&self) -> f32 {
+        self.spacing
+    }
+
+    pub fn set_spacing(&mut self, spacing: f32) {
+        self.spacing = spacing;
+    }
 }
 
 impl LinearLayout {
