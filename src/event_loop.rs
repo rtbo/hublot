@@ -26,11 +26,26 @@ pub fn run(mut event_loop: winit::EventsLoop, mut windows: Vec<(winit::Window, U
         }
 
         match event {
-            winit::Event::WindowEvent {
-                event: winit::WindowEvent::CloseRequested,
-                ..
-            } => winit::ControlFlow::Break,
-            _ => winit::ControlFlow::Continue,
+            winit::Event::WindowEvent{window_id, event} => {
+                let idx = windows.iter().position(|w_ui| w_ui.0.id() == window_id);
+                if let Some(idx) = idx {
+                    let cf = windows[idx].1.handle_event(event);
+                    match cf {
+                        winit::ControlFlow::Break => {
+                            let _ = windows.remove(idx);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {},
+        }
+
+        if windows.len() > 0 {
+            winit::ControlFlow::Continue
+        }
+        else {
+            winit::ControlFlow::Break
         }
     });
 

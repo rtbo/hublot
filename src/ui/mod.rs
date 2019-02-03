@@ -1,4 +1,4 @@
-use crate::geom::IRect;
+use crate::geom::{FSize, FRect, IRect, Size};
 use crate::render;
 use crate::Color;
 use std::cell::Cell;
@@ -14,6 +14,7 @@ pub use view::View;
 
 pub struct UserInterface {
     root: Option<Box<dyn View>>,
+    size: FSize,
     clear_color: Option<Color>,
     dirty: Cell<Dirty>,
 }
@@ -22,6 +23,7 @@ impl UserInterface {
     pub fn new() -> UserInterface {
         UserInterface {
             root: None,
+            size: Size(0f32, 0f32),
             clear_color: None,
             dirty: Cell::new(Dirty::all()),
         }
@@ -30,6 +32,7 @@ impl UserInterface {
     pub fn new_with_color(color: Color) -> UserInterface {
         UserInterface {
             root: None,
+            size: Size(0f32, 0f32),
             clear_color: Some(color),
             dirty: Cell::new(Dirty::all()),
         }
@@ -45,7 +48,33 @@ impl UserInterface {
         self.dirty.get().contains(flags)
     }
 
-    pub fn layout(&mut self) {}
+    /// Handle a window event
+    pub fn handle_event(&mut self, ev: winit::WindowEvent) -> winit::ControlFlow {
+        match ev {
+            winit::WindowEvent::Resized(size) => {
+                self.size = From::from(size);
+                self.add_dirty(Dirty::LAYOUT | Dirty::FRAME);
+                winit::ControlFlow::Continue
+            }
+            winit::WindowEvent::CloseRequested => {
+                winit::ControlFlow::Break
+            }
+            _ => {
+                winit::ControlFlow::Continue
+            }
+        }
+    }
+
+    pub fn layout(&mut self) {
+        if let Some(root) = &mut self.root {
+            let specs = [
+                view::MeasureSpec::AtMost(self.size.width()),
+                view::MeasureSpec::AtMost(self.size.height()),
+            ];
+            root.measure(specs);
+            root.layout(FRect::new_s(0f32, 0f32, self.size));
+        }
+    }
 
     pub fn style(&mut self) {}
 

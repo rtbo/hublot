@@ -39,6 +39,13 @@ impl From<IPoint> for [i32; 2] {
     }
 }
 
+impl From<winit::dpi::LogicalPosition> for FPoint {
+    fn from(pos: winit::dpi::LogicalPosition) -> Self {
+        let (x, y): (f64, f64) = pos.into();
+        Point(x as _, y as _)
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Vec<T>(pub T, pub T);
 
@@ -98,6 +105,13 @@ impl From<FSize> for [f32; 2] {
 impl From<ISize> for [i32; 2] {
     fn from(val: ISize) -> Self {
         [val.0, val.1]
+    }
+}
+
+impl From<winit::dpi::LogicalSize> for FSize {
+    fn from(size: winit::dpi::LogicalSize) -> Self {
+        let (w, h): (f64, f64) = size.into();
+        Size(w as _, h as _)
     }
 }
 
