@@ -13,8 +13,10 @@ pub mod geom;
 pub mod gfx;
 pub mod paint;
 pub mod render;
+pub mod transform;
 pub mod ui;
 
 pub use color::Color;
 pub use paint::Paint;
+pub use transform::Transform;
 pub use ui::UserInterface;

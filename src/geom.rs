@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, Index, IndexMut, Sub};
 
 pub type FPoint = Point<f32>;
 pub type IPoint = Point<i32>;
@@ -24,6 +24,29 @@ impl<T: Copy> Point<T> {
     }
     pub fn y(&self) -> T {
         self.0
+    }
+}
+
+impl<T: Copy> Index<usize> for Point<T> {
+    type Output = T;
+    #[inline(always)]
+    fn index(&self, idx: usize) -> &Self::Output {
+        match idx {
+            0 => &self.0,
+            1 => &self.1,
+            _ => panic!(),
+        }
+    }
+}
+
+impl<T: Copy> IndexMut<usize> for Point<T> {
+    #[inline(always)]
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        match idx {
+            0 => &mut self.0,
+            1 => &mut self.1,
+            _ => panic!(),
+        }
     }
 }
 
@@ -57,6 +80,30 @@ impl<T: Copy> Vec<T> {
         self.0
     }
 }
+
+impl<T: Copy> Index<usize> for Vec<T> {
+    type Output = T;
+    #[inline(always)]
+    fn index(&self, idx: usize) -> &Self::Output {
+        match idx {
+            0 => &self.0,
+            1 => &self.1,
+            _ => panic!(),
+        }
+    }
+}
+
+impl<T: Copy> IndexMut<usize> for Vec<T> {
+    #[inline(always)]
+    fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
+        match idx {
+            0 => &mut self.0,
+            1 => &mut self.1,
+            _ => panic!(),
+        }
+    }
+}
+
 
 impl From<FVec> for [f32; 2] {
     fn from(val: FVec) -> Self {
@@ -238,14 +285,5 @@ impl<T: Copy + Add<Output = T> + Sub<Output = T>> Sub<Margins<T>> for Rect<T> {
             width: self.width - rhs.horizontal(),
             height: self.height + rhs.vertical(),
         }
-    }
-}
-
-#[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Transform([f32; 6]);
-
-impl Transform {
-    pub fn identity() -> Transform {
-        Transform([1f32, 0f32, 0f32, 0f32, 1f32, 0f32])
     }
 }
