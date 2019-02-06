@@ -1,15 +1,16 @@
 use crate::render;
 use crate::{ui, UserInterface};
+use std::rc::Rc;
 use winit;
 
-pub fn run(mut event_loop: winit::EventsLoop, mut windows: Vec<(winit::Window, UserInterface)>) {
+pub fn run(mut event_loop: winit::EventsLoop, mut windows: Vec<(winit::Window, Rc<UserInterface>)>) {
     let wins: Vec<_> = windows.iter().map(|w| &(*w).0).collect();
     let render_thread = render::Thread::new(wins);
 
     event_loop.run_forever(|event| {
         let mut frames = Vec::new();
 
-        for w_ui in &mut windows {
+        for w_ui in &windows {
             if w_ui.1.dirty(ui::Dirty::STYLE) {
                 w_ui.1.style();
             }

@@ -1,46 +1,52 @@
+use crate::Color;
 use crate::geom::{FSize, FRect, IRect, Size};
 use crate::render;
-use crate::Color;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 use winit::Window;
 
 pub mod label;
 pub mod layout;
+pub mod node;
 pub mod view;
 
 pub use label::Label;
 pub use layout::LinearLayout;
+pub use node::Node;
 pub use view::View;
 
+#[derive(Debug)]
 pub struct UserInterface {
-    root: Option<Box<dyn View>>,
-    size: FSize,
-    clear_color: Option<Color>,
+    root: RefCell<Option<Rc<Node>>>,
+    size: Cell<FSize>,
+    clear_color: Cell<Option<Color>>,
     dirty: Cell<Dirty>,
 }
 
 impl UserInterface {
-    pub fn new() -> UserInterface {
-        UserInterface {
-            root: None,
-            size: Size(0f32, 0f32),
-            clear_color: None,
+    pub fn new() -> Rc<UserInterface> {
+        Rc::new(UserInterface {
+            root: RefCell::new(None),
+            size: Cell::new(Size(0f32, 0f32)),
+            clear_color: Cell::new(None),
             dirty: Cell::new(Dirty::all()),
-        }
+        })
     }
 
-    pub fn new_with_color(color: Color) -> UserInterface {
-        UserInterface {
-            root: None,
-            size: Size(0f32, 0f32),
-            clear_color: Some(color),
-            dirty: Cell::new(Dirty::all()),
-        }
+    pub fn new_with_color(color: Color) -> Rc<UserInterface> {
+        let ui = Self::new();
+        ui.clear_color.set(Some(color));
+        ui
     }
 
-    pub fn set_root(&mut self, root: Option<Box<dyn View>>) {
-        self.root = root;
+    pub fn set_root(&self, root: Option<Rc<Node>>) {
+        *self.root.borrow_mut() = root;
         self.add_dirty(Dirty::LAYOUT | Dirty::STYLE | Dirty::FRAME);
+    }
+
+    /// Get the size of the user interface
+    pub fn size(&self) -> FSize {
+        self.size.get()
     }
 
     /// Checks whether all given dirty flags are set
@@ -49,10 +55,10 @@ impl UserInterface {
     }
 
     /// Handle a window event
-    pub fn handle_event(&mut self, ev: winit::WindowEvent) -> winit::ControlFlow {
+    pub fn handle_event(&self, ev: winit::WindowEvent) -> winit::ControlFlow {
         match ev {
             winit::WindowEvent::Resized(size) => {
-                self.size = From::from(size);
+                self.size.set(From::from(size));
                 self.add_dirty(Dirty::LAYOUT | Dirty::FRAME);
                 winit::ControlFlow::Continue
             }
@@ -65,18 +71,20 @@ impl UserInterface {
         }
     }
 
-    pub fn layout(&mut self) {
-        if let Some(root) = &mut self.root {
+    pub fn layout(&self) {
+        if let Some(root) = self.root.borrow().as_ref() {
+            let size = self.size();
             let specs = [
-                view::MeasureSpec::AtMost(self.size.width()),
-                view::MeasureSpec::AtMost(self.size.height()),
+                view::MeasureSpec::AtMost(size.width()),
+                view::MeasureSpec::AtMost(size.height()),
             ];
+            let mut root = root.view_mut::<dyn View>();
             root.measure(specs);
-            root.layout(FRect::new_s(0f32, 0f32, self.size));
+            root.layout(FRect::new_s(0f32, 0f32, self.size()));
         }
     }
 
-    pub fn style(&mut self) {}
+    pub fn style(&self) {}
 
     pub fn frame(&self, win: &Window) -> render::Frame {
         self.remove_dirty(Dirty::FRAME);
@@ -88,7 +96,7 @@ impl UserInterface {
         render::Frame::new(
             win.id(),
             IRect::new(0, 0, size.0 as _, size.1 as _),
-            self.clear_color,
+            self.clear_color.get(),
             None,
         )
     }

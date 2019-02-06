@@ -3,7 +3,7 @@ extern crate winit;
 
 use hublot::event_loop;
 use hublot::{color, Color, UserInterface};
-use hublot::ui::{LinearLayout, Label};
+use hublot::ui;
 
 fn main() {
     let events_loop = winit::EventsLoop::new();
@@ -14,16 +14,18 @@ fn main() {
         .build(&events_loop)
         .unwrap();
 
-    let mut ui = UserInterface::new_with_color(Color::from(color::CssName::CadetBlue));
+    let ui = UserInterface::new_with_color(Color::from(color::CssName::CadetBlue));
 
-    let mut layout = LinearLayout::new_vertical();
+    let mut layout = ui::LinearLayout::new_vertical();
     layout.set_spacing(6f32);
-    let lbl1 = Label::new(From::from(color::CssName::Chocolate));
-    layout.add_view(Box::new(lbl1));
-    let lbl2 = Label::new(From::from(color::CssName::Coral));
-    layout.add_view(Box::new(lbl2));
+    let lbl1 = ui::Label::new(From::from(color::CssName::Chocolate));
+    let lbl2 = ui::Label::new(From::from(color::CssName::Coral));
 
-    ui.set_root(Some(Box::new(layout)));
+    let layout = ui::Node::new(layout, ui.clone(), None);
+    let lbl1 = ui::Node::new(lbl1, ui.clone(), None);
+    let lbl2 = ui::Node::new(lbl2, ui.clone(), None);
+
+    ui.set_root(Some(layout));
 
     event_loop::run(events_loop, vec![(window, ui)]);
 }

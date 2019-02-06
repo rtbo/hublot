@@ -1,8 +1,8 @@
+use crate::{Color, Paint};
+use crate::color;
 use crate::geom::FRect;
 use crate::render::frame;
 use crate::ui::view::{self, HasRect, MeasureSpec, View};
-use crate::Paint;
-use crate::{color, Color};
 
 /// A view that can display text or image
 #[derive(Debug)]

@@ -1,9 +1,11 @@
 use crate::geom::{FMargins, FPoint, FRect, FSize, Margins, Size};
 use crate::render::frame;
+use crate::ui::Node;
 use crate::Transform;
 
 use std::fmt::Debug;
 // use std::iter;
+use std::rc::Weak;
 use std::slice;
 
 /// The View trait represent a single or composed view in a view tree.
@@ -166,6 +168,7 @@ pub trait Base: View {
 
 #[derive(Debug)]
 pub struct Common {
+    pub node: Weak<Node>,
     pub measurement: FSize,
     pub rect: FRect,
     pub padding: FMargins,
@@ -200,6 +203,7 @@ impl<T: Base> HasMargins for T {
 impl Default for Common {
     fn default() -> Common {
         Common {
+            node: Weak::default(),
             measurement: Size(0f32, 0f32),
             rect: FRect::new(0f32, 0f32, 0f32, 0f32),
             padding: Margins(0f32, 0f32, 0f32, 0f32),
