@@ -31,8 +31,6 @@ impl Default for Label {
 
 impl View for Label {}
 
-impl view::Leaf for Label {}
-
 impl view::Measure for Label {
     fn measure(&mut self, _specs: [MeasureSpec; 2]) {}
 }

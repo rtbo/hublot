@@ -78,7 +78,7 @@ impl UserInterface {
                 view::MeasureSpec::AtMost(size.width()),
                 view::MeasureSpec::AtMost(size.height()),
             ];
-            let mut root = root.view_mut::<dyn View>();
+            let mut root = root.view_mut();
             root.measure(specs);
             root.layout(FRect::new_s(0f32, 0f32, self.size()));
         }

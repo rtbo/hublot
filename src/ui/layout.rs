@@ -1,6 +1,7 @@
 use crate::geom::{FMargins, FRect, Margins, Size};
 use crate::render::frame;
 use crate::ui::view::Base;
+use crate::ui::view::Children;
 use crate::ui::view::{self, HasMargins, HasPadding, MeasureSpec};
 use crate::ui::View;
 
@@ -168,18 +169,18 @@ pub enum LayoutSize {
 pub struct LinearLayout {
     common: view::Common,
     orientation: Orientation,
-    views: Vec<Box<dyn View>>,
     total_length: Cell<f32>,
     gravity: Gravity,
     spacing: f32,
 }
+
+impl view::HasChildren for LinearLayout {}
 
 impl LinearLayout {
     pub fn new(orientation: Orientation) -> LinearLayout {
         LinearLayout {
             common: view::Common::default(),
             orientation,
-            views: Vec::new(),
             total_length: Cell::new(0f32),
             gravity: Default::default(),
             spacing: 0f32,
@@ -196,10 +197,6 @@ impl LinearLayout {
 
     pub fn orientation(&self) -> Orientation {
         self.orientation
-    }
-
-    pub fn add_view(&mut self, view: Box<dyn View>) {
-        self.views.push(view)
     }
 
     pub fn gravity(&self) -> Gravity {
@@ -252,8 +249,9 @@ impl view::Measure for LinearLayout {
 
         let padding = self.padding();
 
-        for view in &mut self.views {
-            Self::measure_child(padding, &mut **view, specs, total);
+        for node in self.children() {
+            let mut view = node.view_mut();
+            Self::measure_child(padding, &mut *view, specs, total);
             let m: [f32; 2] = From::from(view.measurement());
             total[ind] += m[ind];
             largest_ortho =
@@ -304,8 +302,9 @@ impl view::Layout for LinearLayout {
         let child_ortho_space = child_ortho_after - padding.along_before(ortho);
         let mut first = true;
 
-        for view in &mut self.views {
+        for node in self.children() {
             // TODO: child margins
+            let mut view = node.view_mut();
             let mes = view.measurement();
             let child_ortho_before = match self.gravity.along(ortho) {
                 AxisGravity::PULL_AFTER => {
@@ -337,15 +336,6 @@ impl view::Layout for LinearLayout {
 impl view::FrameRender for LinearLayout {
     fn frame_render(&self) -> Option<frame::Node> {
         None
-    }
-}
-
-impl view::SliceParent for LinearLayout {
-    fn children_slice(&self) -> &[Box<dyn View>] {
-        &self.views
-    }
-    fn children_slice_mut(&mut self) -> &mut [Box<dyn View>] {
-        &mut self.views
     }
 }
 

@@ -3,9 +3,11 @@ extern crate gfx_hal as hal;
 extern crate winit;
 
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate downcast_rs;
+#[macro_use]
+extern crate lazy_static;
 
 pub mod color;
 pub mod event_loop;

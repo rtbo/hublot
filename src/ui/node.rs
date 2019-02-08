@@ -1,5 +1,6 @@
 use super::{UserInterface, View};
-use std::any::Any;
+use super::view::Base;
+use super::view::Common;
 use std::cell::{Ref, RefCell, RefMut};
 use std::rc::{Rc, Weak};
 
@@ -23,7 +24,7 @@ use id::Id;
 #[derive(Debug)]
 pub struct Node {
     id: Id,
-    view: RefCell<Box<dyn Any>>,
+    view: RefCell<Box<dyn View>>,
     ui: Weak<UserInterface>,
     me: RefCell<Weak<Node>>,
     parent: RefCell<Option<Weak<Node>>>,
@@ -36,9 +37,10 @@ pub struct Node {
 impl Node {
     pub fn new<V>(view: V, ui: Rc<UserInterface>, parent: Option<Rc<Node>>) -> Rc<Node>
     where
-        V: View + Any + 'static
+        V: Base + 'static
     {
-        let boxed = Box::new(view);
+        let mut boxed = Box::new(view);
+        let common: *mut Common = boxed.common_mut() as *mut _;
         let node = Rc::new(Node {
             id: Id::next(),
             view: RefCell::new(boxed),
@@ -51,6 +53,8 @@ impl Node {
             next_sibling: RefCell::new(None),
         });
         *node.me.borrow_mut() = Rc::downgrade(&node);
+        let mut common = unsafe { &mut *common };
+        common.node = Rc::downgrade(&node);
         node
     }
 
@@ -62,21 +66,30 @@ impl Node {
         self.ui.upgrade().unwrap()
     }
 
-    pub fn view<V>(&self) -> Ref<V>
-    where
-        V: View + Any + ?Sized
+    pub fn view(&self) -> Ref<dyn View>
     {
-        unimplemented!()
-        //Ref::map(self.view.borrow(), |v| &**v)
+        Ref::map(self.view.borrow(), |v| &**v)
     }
 
-    pub fn view_mut<V>(&self) -> RefMut<V>
-    where
-        V: View + Any + ?Sized
+    pub fn view_mut(&self) -> RefMut<dyn View>
     {
-        let view = self.view.borrow_mut();
-        RefMut::map(view, |v| (&**v).downcast_mut::<V>().unwrap())
-        //RefMut::map(self.view.borrow_mut(), |v| &mut **v)
+        RefMut::map(self.view.borrow_mut(), |v| &mut **v)
+    }
+
+    pub fn view_as<V>(&self) -> Ref<V>
+        where V: View
+    {
+        Ref::map(self.view(), |v| {
+            v.downcast_ref::<V>().unwrap()
+        })
+    }
+
+    pub fn view_as_mut<V>(&self) -> RefMut<V>
+        where V: View
+    {
+        RefMut::map(self.view_mut(), |v| {
+            v.downcast_mut::<V>().unwrap()
+        })
     }
 
     pub fn parent(&self) -> Option<Rc<Node>> {
@@ -109,7 +122,7 @@ impl Node {
     }
 
     pub fn has_children(&self) -> bool {
-        debug_assert!(self.first_child.borrow().is_some() == self.last_child.borrow().is_none());
+        debug_assert!(self.first_child.borrow().is_some() == self.last_child.borrow().is_some());
         self.first_child.borrow().is_some()
     }
 

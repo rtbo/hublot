@@ -3,14 +3,21 @@ use crate::render::frame;
 use crate::ui::Node;
 use crate::Transform;
 
+use downcast_rs::Downcast;
+
 use std::fmt::Debug;
 // use std::iter;
-use std::rc::Weak;
-use std::slice;
+use std::rc::{Rc, Weak};
+//use std::slice;
 
 /// The View trait represent a single or composed view in a view tree.
 /// The View trait is object safe.
-pub trait View: Debug + Measure + Layout + FrameRender + HasRect + HasPadding + HasMargins {}
+pub trait View:
+    Debug + Downcast + NodeOwned + Measure + Layout + FrameRender + HasRect + HasPadding + HasMargins
+{
+}
+
+impl_downcast!(View);
 
 /// Specify how a View should measure itself
 #[derive(Clone, Copy, Debug)]
@@ -18,6 +25,12 @@ pub enum MeasureSpec {
     Unspecified,
     AtMost(f32),
     Exactly(f32),
+}
+
+/// Trait for being owned by a Node
+pub trait NodeOwned {
+    /// Get the node owning self
+    fn node(&self) -> Rc<Node>;
 }
 
 /// Trait for object that store measurement
@@ -84,12 +97,14 @@ impl<T: HasRect> HasSize for T {
     }
 }
 
-pub trait Parent<'a> {
-    type Children: IntoIterator<Item = &'a dyn View>;
-    type ChildrenMut: IntoIterator<Item = &'a mut dyn View>;
+/// Marker to indicate that Children should be implemented
+pub trait HasChildren {}
 
-    fn children(&'a self) -> Self::Children;
-    fn children_mut(&'a mut self) -> Self::ChildrenMut;
+/// A View with children
+pub trait Children {
+    type Children: IntoIterator<Item = Rc<Node>>;
+
+    fn children(&self) -> Self::Children;
 }
 
 /// A View without children
@@ -107,52 +122,52 @@ pub trait Leaf {}
 //     }
 // }
 
-pub trait SliceParent {
-    fn children_slice(&self) -> &[Box<dyn View>];
-    fn children_slice_mut(&mut self) -> &mut [Box<dyn View>];
-}
+// pub trait SliceParent {
+//     fn children_slice(&self) -> &[Box<dyn View>];
+//     fn children_slice_mut(&mut self) -> &mut [Box<dyn View>];
+// }
 
-pub struct ChildrenIter<'a> {
-    iter: slice::Iter<'a, Box<dyn View>>,
-}
+// pub struct ChildrenIter<'a> {
+//     iter: slice::Iter<'a, Box<dyn View>>,
+// }
 
-impl<'a> Iterator for ChildrenIter<'a> {
-    type Item = &'a dyn View;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|boxed| &**boxed)
-    }
-}
+// impl<'a> Iterator for ChildrenIter<'a> {
+//     type Item = &'a dyn View;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.iter.next().map(|boxed| &**boxed)
+//     }
+// }
 
-pub struct ChildrenIterMut<'a> {
-    iter: slice::IterMut<'a, Box<dyn View>>,
-}
+// pub struct ChildrenIterMut<'a> {
+//     iter: slice::IterMut<'a, Box<dyn View>>,
+// }
 
-impl<'a> Iterator for ChildrenIterMut<'a> {
-    type Item = &'a mut dyn View;
-    fn next(&mut self) -> Option<Self::Item> {
-        //self.iter.next().map(|boxed| &mut **boxed)
-        match self.iter.next() {
-            None => None,
-            Some(boxed) => Some(&mut **boxed),
-        }
-    }
-}
+// impl<'a> Iterator for ChildrenIterMut<'a> {
+//     type Item = &'a mut dyn View;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         //self.iter.next().map(|boxed| &mut **boxed)
+//         match self.iter.next() {
+//             None => None,
+//             Some(boxed) => Some(&mut **boxed),
+//         }
+//     }
+// }
 
-impl<'a, T: SliceParent> Parent<'a> for T {
-    type Children = ChildrenIter<'a>;
-    type ChildrenMut = ChildrenIterMut<'a>;
+// impl<'a, T: SliceParent> Parent<'a> for T {
+//     type Children = ChildrenIter<'a>;
+//     type ChildrenMut = ChildrenIterMut<'a>;
 
-    fn children(&'a self) -> Self::Children {
-        ChildrenIter {
-            iter: self.children_slice().iter(),
-        }
-    }
-    fn children_mut(&'a mut self) -> Self::ChildrenMut {
-        ChildrenIterMut {
-            iter: self.children_slice_mut().iter_mut(),
-        }
-    }
-}
+//     fn children(&'a self) -> Self::Children {
+//         ChildrenIter {
+//             iter: self.children_slice().iter(),
+//         }
+//     }
+//     fn children_mut(&'a mut self) -> Self::ChildrenMut {
+//         ChildrenIterMut {
+//             iter: self.children_slice_mut().iter_mut(),
+//         }
+//     }
+// }
 
 pub trait Base: View {
     type State;
@@ -176,6 +191,12 @@ pub struct Common {
     pub transform: Transform,
 }
 
+impl<T: Base> NodeOwned for T {
+    fn node(&self) -> Rc<Node> {
+        self.common().node.upgrade().unwrap()
+    }
+}
+
 impl<T: Base> Measurement for T {
     fn measurement(&self) -> FSize {
         self.common().measurement
@@ -197,6 +218,33 @@ impl<T: Base> HasPadding for T {
 impl<T: Base> HasMargins for T {
     fn margins(&self) -> FMargins {
         self.common().margins
+    }
+}
+
+pub struct ChildrenIter {
+    sibling: Option<Rc<Node>>,
+}
+
+impl Iterator for ChildrenIter {
+    type Item = Rc<Node>;
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.sibling {
+            None => None,
+            Some(node) => {
+                self.sibling = node.next_sibling();
+                self.sibling.clone()
+            }
+        }
+    }
+}
+
+impl <T: Base + HasChildren> Children for T {
+    type Children = ChildrenIter;
+
+    fn children(&self) -> ChildrenIter {
+        ChildrenIter {
+            sibling: self.node().first_child()
+        }
     }
 }
 

@@ -24,6 +24,8 @@ fn main() {
     let layout = ui::Node::new(layout, ui.clone(), None);
     let lbl1 = ui::Node::new(lbl1, ui.clone(), None);
     let lbl2 = ui::Node::new(lbl2, ui.clone(), None);
+    layout.add_child(&lbl1, None);
+    layout.add_child(&lbl2, None);
 
     ui.set_root(Some(layout));
 
