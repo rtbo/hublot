@@ -238,12 +238,12 @@ impl Iterator for ChildrenIter {
     }
 }
 
-impl <T: Base + HasChildren> Children for T {
+impl<T: Base + HasChildren> Children for T {
     type Children = ChildrenIter;
 
     fn children(&self) -> ChildrenIter {
         ChildrenIter {
-            sibling: self.node().first_child()
+            sibling: self.node().first_child(),
         }
     }
 }

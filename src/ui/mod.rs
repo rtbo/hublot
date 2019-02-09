@@ -1,6 +1,6 @@
-use crate::Color;
-use crate::geom::{FSize, FRect, IRect, Size};
+use crate::geom::{FRect, FSize, IRect, Size};
 use crate::render;
+use crate::Color;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use winit::Window;
@@ -62,12 +62,8 @@ impl UserInterface {
                 self.add_dirty(Dirty::LAYOUT | Dirty::FRAME);
                 winit::ControlFlow::Continue
             }
-            winit::WindowEvent::CloseRequested => {
-                winit::ControlFlow::Break
-            }
-            _ => {
-                winit::ControlFlow::Continue
-            }
+            winit::WindowEvent::CloseRequested => winit::ControlFlow::Break,
+            _ => winit::ControlFlow::Continue,
         }
     }
 

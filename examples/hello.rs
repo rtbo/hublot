@@ -2,8 +2,8 @@ extern crate hublot;
 extern crate winit;
 
 use hublot::event_loop;
-use hublot::{color, Color, UserInterface};
 use hublot::ui;
+use hublot::{color, Color, UserInterface};
 
 fn main() {
     let events_loop = winit::EventsLoop::new();

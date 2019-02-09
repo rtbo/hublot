@@ -3,7 +3,10 @@ use crate::{ui, UserInterface};
 use std::rc::Rc;
 use winit;
 
-pub fn run(mut event_loop: winit::EventsLoop, mut windows: Vec<(winit::Window, Rc<UserInterface>)>) {
+pub fn run(
+    mut event_loop: winit::EventsLoop,
+    mut windows: Vec<(winit::Window, Rc<UserInterface>)>,
+) {
     let wins: Vec<_> = windows.iter().map(|w| &(*w).0).collect();
     let render_thread = render::Thread::new(wins);
 
@@ -27,7 +30,7 @@ pub fn run(mut event_loop: winit::EventsLoop, mut windows: Vec<(winit::Window, R
         }
 
         match event {
-            winit::Event::WindowEvent{window_id, event} => {
+            winit::Event::WindowEvent { window_id, event } => {
                 let idx = windows.iter().position(|w_ui| w_ui.0.id() == window_id);
                 if let Some(idx) = idx {
                     let cf = windows[idx].1.handle_event(event);
@@ -39,13 +42,12 @@ pub fn run(mut event_loop: winit::EventsLoop, mut windows: Vec<(winit::Window, R
                     }
                 }
             }
-            _ => {},
+            _ => {}
         }
 
         if windows.len() > 0 {
             winit::ControlFlow::Continue
-        }
-        else {
+        } else {
             winit::ControlFlow::Break
         }
     });

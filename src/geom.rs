@@ -104,7 +104,6 @@ impl<T: Copy> IndexMut<usize> for Vec<T> {
     }
 }
 
-
 impl From<FVec> for [f32; 2] {
     fn from(val: FVec) -> Self {
         [val.0, val.1]

@@ -132,9 +132,7 @@ fn render_loop(instance: Arc<gfx::Instance>, windows: Vec<WindowInfo>, rx: mpsc:
     renderer.destroy();
 }
 
-trait NodeRenderer {
-
-}
+trait NodeRenderer {}
 
 struct Renderer {
     physical_device: gfx::PhysicalDevice,
