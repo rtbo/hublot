@@ -18,7 +18,7 @@ pub mod render;
 pub mod transform;
 pub mod ui;
 
-pub use color::Color;
-pub use paint::Paint;
-pub use transform::Transform;
-pub use ui::UserInterface;
+pub use self::color::Color;
+pub use self::paint::Paint;
+pub use self::transform::Transform;
+pub use self::ui::UserInterface;

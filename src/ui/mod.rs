@@ -10,10 +10,10 @@ pub mod layout;
 pub mod node;
 pub mod view;
 
-pub use label::Label;
-pub use layout::LinearLayout;
-pub use node::Node;
-pub use view::View;
+pub use self::label::Label;
+pub use self::layout::LinearLayout;
+pub use self::node::Node;
+pub use self::view::View;
 
 #[derive(Debug)]
 pub struct UserInterface {

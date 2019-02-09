@@ -8,7 +8,7 @@ use winit::{self, dpi::PhysicalSize, WindowId};
 
 pub mod frame;
 
-pub use frame::Frame;
+pub use self::frame::Frame;
 
 pub struct Thread {
     instance: Arc<gfx::Instance>,
