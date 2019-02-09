@@ -41,12 +41,12 @@ impl view::Layout for Label {
 
 impl view::FrameRender for Label {
     fn frame_render(&self) -> Option<frame::Node> {
-        Some(frame::Node::Rect {
+        Some(frame::Node::Rect(frame::RectNode {
             rect: self.rect(),
             paint: Paint::Solid(self.color),
             radius: 0f32,
             border: None,
-        })
+        }))
     }
 }
 

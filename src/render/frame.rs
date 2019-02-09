@@ -25,13 +25,15 @@ impl Frame {
     }
 }
 
+pub struct RectNode {
+    pub rect: FRect,
+    pub paint: Paint,
+    pub radius: f32,
+    pub border: Option<(Color, f32)>,
+}
+
 pub enum Node {
     Group(Vec<Node>),
     Transform(Box<Node>, [f32; 16]),
-    Rect {
-        rect: FRect,
-        paint: Paint,
-        radius: f32,
-        border: Option<(Color, f32)>,
-    },
+    Rect(RectNode),
 }
