@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 bitflags = "1.0"
 downcast-rs = "1.0.3"
-gfx-hal = { path="gfx/src/hal" }
-gfx-backend-vulkan = { path="gfx/src/backend/vulkan", features=[] }
+gfx-hal = "0.1"
+gfx-backend-vulkan = "0.1"
 lazy_static = "1.2.0"
 winit = { version="0.18.1" }
