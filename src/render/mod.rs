@@ -7,6 +7,7 @@ use std::thread;
 use winit::{self, dpi::PhysicalSize, WindowId};
 
 pub mod frame;
+pub mod memalloc;
 
 pub use self::frame::Frame;
 
