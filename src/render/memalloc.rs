@@ -5,11 +5,10 @@ use hal::image;
 use hal::memory;
 
 use std::fmt::Debug;
-use std::ops::Range;
-use std::sync::Arc;
+use std::ops::{Deref, Range};
+use std::sync::{Arc, Mutex};
 
 use hal::Device;
-use hal::PhysicalDevice;
 
 /// Define how many bytes can be used from a specific size
 #[derive(Debug, Copy, Clone)]
@@ -49,6 +48,15 @@ pub struct AllocatorOptions {
     pub dedicated: bool,
     /// one entry per heap in the device
     pub heap_options: Vec<HeapOptions>,
+}
+
+impl Default for AllocatorOptions {
+    fn default() -> Self {
+        Self {
+            dedicated: false,
+            heap_options: Vec::new(),
+        }
+    }
 }
 
 /// Control of an allocation of memory
@@ -170,6 +178,11 @@ pub trait MemAlloc<B: hal::Backend>: Debug {
     fn mem(&self) -> &B::Memory;
     /// the range of this allocation within `self.mem()`
     fn range(&self) -> Range<u64>;
+    /// The size of this allocation
+    fn size(&self) -> u64 {
+        let r = self.range();
+        r.end - r.start
+    }
 }
 
 /// A Buffer memory allocation
@@ -181,9 +194,10 @@ pub struct BufferAlloc<B: hal::Backend> {
     heap_idx: usize,
 }
 
-impl<B: hal::Backend> BufferAlloc<B> {
+impl<B: hal::Backend> Deref for BufferAlloc<B> {
+    type Target = B::Buffer;
     /// Access underlying buffer
-    pub fn buffer(&self) -> &B::Buffer {
+    fn deref(&self) -> &B::Buffer {
         &self.buffer
     }
 }
@@ -206,9 +220,10 @@ pub struct ImageAlloc<B: hal::Backend> {
     heap_idx: usize,
 }
 
-impl<B: hal::Backend> ImageAlloc<B> {
+impl<B: hal::Backend> Deref for ImageAlloc<B> {
+    type Target = B::Image;
     /// Access underlying image
-    pub fn image(&self) -> &B::Image {
+    fn deref(&self) -> &B::Image {
         &self.image
     }
 }
@@ -304,13 +319,16 @@ pub struct Allocator<B: hal::Backend> {
     device: Arc<B::Device>,
     options: AllocatorOptions,
     mem_props: hal::MemoryProperties,
-    pools: Vec<Pool<B>>,
+    pools: Vec<Mutex<Pool<B>>>,
 }
 
 impl<B: hal::Backend> Allocator<B> {
     /// Build a new memory allocator
-    pub fn new(device: Arc<B::Device>, phd: &B::PhysicalDevice, options: AllocatorOptions) -> Self {
-        let mem_props = phd.memory_properties();
+    pub fn new(
+        device: Arc<B::Device>,
+        mem_props: hal::MemoryProperties,
+        options: AllocatorOptions,
+    ) -> Self {
         let mut pools = Vec::with_capacity(mem_props.memory_heaps.len());
 
         for (i, h) in mem_props.memory_heaps.iter().enumerate() {
@@ -325,12 +343,12 @@ impl<B: hal::Backend> Allocator<B> {
                 HeapUsage::Upto(sz) => sz,
             };
             let (max_bytes, block_size) = Self::heap_block_size(*h, max_bytes, opts.block_size);
-            pools.push(Pool::new(
+            pools.push(Mutex::new(Pool::new(
                 device.clone(),
                 i,
                 max_bytes,
                 block_size,
-            ));
+            )));
         }
 
         Self {
@@ -343,7 +361,7 @@ impl<B: hal::Backend> Allocator<B> {
 
     /// Create a new buffer and bind it to a new suballocation fitting with its requirements
     pub unsafe fn allocate_buffer(
-        &mut self,
+        &self,
         usage: buffer::Usage,
         size: u64,
         options: &AllocOptions,
@@ -351,7 +369,8 @@ impl<B: hal::Backend> Allocator<B> {
         let mut buffer = self.device.create_buffer(size, usage)?;
         let reqs = self.device.get_buffer_requirements(&buffer);
         let res = self.allocate_raw(&reqs, options)?;
-        self.device.bind_buffer_memory(&res.mem, res.span.start, &mut buffer)?;
+        self.device
+            .bind_buffer_memory(&res.mem, res.span.start, &mut buffer)?;
 
         Ok(BufferAlloc {
             buffer,
@@ -362,16 +381,22 @@ impl<B: hal::Backend> Allocator<B> {
     }
 
     /// Free a buffer allocated with this allocator
-    pub unsafe fn free_buffer(&mut self, buffer: BufferAlloc<B>) {
-        let BufferAlloc { buffer, mem, range, heap_idx } = buffer;
+    pub unsafe fn free_buffer(&self, buffer: BufferAlloc<B>) {
+        let BufferAlloc {
+            buffer,
+            mem,
+            range,
+            heap_idx,
+        } = buffer;
 
         self.device.destroy_buffer(buffer);
-        self.pools[heap_idx].free(mem, range.start);
+        let mut pool = self.pools[heap_idx].lock().unwrap();
+        pool.free(mem, range.start);
     }
 
     /// Create a new image and bind it to a new suballocation fittting with its requirements
     pub unsafe fn allocate_image(
-        &mut self,
+        &self,
         kind: image::Kind,
         mip_levels: image::Level,
         format: hal::format::Format,
@@ -380,10 +405,13 @@ impl<B: hal::Backend> Allocator<B> {
         view_caps: image::ViewCapabilities,
         options: &AllocOptions,
     ) -> ImageResult<B> {
-        let mut image = self.device.create_image(kind, mip_levels, format, tiling, usage, view_caps)?;
+        let mut image = self
+            .device
+            .create_image(kind, mip_levels, format, tiling, usage, view_caps)?;
         let reqs = self.device.get_image_requirements(&image);
         let res = self.allocate_raw(&reqs, options)?;
-        self.device.bind_image_memory(&res.mem, res.span.start, &mut image)?;
+        self.device
+            .bind_image_memory(&res.mem, res.span.start, &mut image)?;
 
         Ok(ImageAlloc {
             image,
@@ -394,16 +422,26 @@ impl<B: hal::Backend> Allocator<B> {
     }
 
     /// Free a buffer allocated with this allocator
-    pub unsafe fn free_image(&mut self, image: ImageAlloc<B>) {
-        let ImageAlloc { image, mem, range, heap_idx, } = image;
+    pub unsafe fn free_image(&self, image: ImageAlloc<B>) {
+        let ImageAlloc {
+            image,
+            mem,
+            range,
+            heap_idx,
+        } = image;
 
         self.device.destroy_image(image);
-        self.pools[heap_idx].free(mem, range.start);
+        let mut pool = self.pools[heap_idx].lock().unwrap();
+        pool.free(mem, range.start);
     }
 }
 
 impl<B: hal::Backend> Allocator<B> {
-    unsafe fn allocate_raw(&mut self, reqs: &memory::Requirements, options: &AllocOptions) -> CommonResult<B> {
+    unsafe fn allocate_raw(
+        &self,
+        reqs: &memory::Requirements,
+        options: &AllocOptions,
+    ) -> CommonResult<B> {
         let control = if self.options.dedicated {
             AllocControl::Dedicated
         } else {
@@ -435,13 +473,13 @@ impl<B: hal::Backend> Allocator<B> {
     }
 
     unsafe fn try_allocate(
-        &mut self,
+        &self,
         reqs: &memory::Requirements,
         mem_type_index: usize,
         control: AllocControl,
     ) -> CommonResult<B> {
         let mem_type = self.mem_props.memory_types[mem_type_index];
-        let pool = &mut self.pools[mem_type.heap_index];
+        let mut pool = self.pools[mem_type.heap_index].lock().unwrap();
         pool.allocate(mem_type_index, reqs, control)
     }
 
@@ -607,12 +645,7 @@ struct Pool<B: hal::Backend> {
 }
 
 impl<B: hal::Backend> Pool<B> {
-    fn new(
-        device: Arc<B::Device>,
-        heap_idx: usize,
-        max_bytes: u64,
-        block_size: u64,
-    ) -> Self {
+    fn new(device: Arc<B::Device>, heap_idx: usize, max_bytes: u64, block_size: u64) -> Self {
         Self {
             device,
             heap_idx,
@@ -637,8 +670,12 @@ impl<B: hal::Backend> Pool<B> {
 
     /// Free at the given block id and address within the block
     /// Panics if block or allocation within block is not found
-    unsafe fn free (&mut self, mem: Arc<B::Memory>, addr: u64) {
-        let idx = self.blocks.iter().position(|b| Arc::ptr_eq(&mem, &b.mem)).unwrap();
+    unsafe fn free(&mut self, mem: Arc<B::Memory>, addr: u64) {
+        let idx = self
+            .blocks
+            .iter()
+            .position(|b| Arc::ptr_eq(&mem, &b.mem))
+            .unwrap();
         if self.blocks[idx].free(addr) {
             {
                 let _ = self.blocks.remove(idx);
@@ -685,13 +722,20 @@ impl<B: hal::Backend> Pool<B> {
             return Err(From::from(Error::HeapExhausted));
         }
 
-        let mem = self.device.allocate_memory(From::from(mem_type_index), sz)?;
+        let mem = self
+            .device
+            .allocate_memory(From::from(mem_type_index), sz)?;
 
         self.used_bytes += sz;
 
         let blk = Block::new(Arc::new(mem), mem_type_index, sz, sz == reqs.size);
         self.blocks.push(blk);
-        Ok(self.blocks.last_mut().unwrap().allocate(self.heap_idx, reqs).unwrap())
+        Ok(self
+            .blocks
+            .last_mut()
+            .unwrap()
+            .allocate(self.heap_idx, reqs)
+            .unwrap())
     }
 }
 
