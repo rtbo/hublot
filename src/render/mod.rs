@@ -8,8 +8,12 @@ use winit::{self, dpi::PhysicalSize, WindowId};
 
 pub mod frame;
 pub mod memalloc;
+pub mod services;
 
 pub use self::frame::Frame;
+pub use self::services::Services;
+
+mod rect;
 
 pub struct Thread {
     instance: Arc<gfx::Instance>,
@@ -133,13 +137,21 @@ fn render_loop(instance: Arc<gfx::Instance>, windows: Vec<WindowInfo>, rx: mpsc:
     renderer.destroy();
 }
 
-trait NodeRenderer {}
+trait NodeRenderer {
+    type Node;
+
+    fn prerender(&mut self, node: &mut Self::Node);
+    fn prerender_end(&mut self);
+    fn render(&mut self, node: &mut Self::Node);
+    fn post_render(&mut self);
+}
 
 struct Renderer {
     physical_device: gfx::PhysicalDevice,
-    device: gfx::Device,
+    device: Arc<gfx::Device>,
     queues: gfx::QueueGroup,
-    _memory_props: hal::MemoryProperties,
+    memory_props: hal::MemoryProperties,
+    services: Services<gfx::Backend>,
     windows: Vec<Window>,
 }
 
@@ -170,12 +182,15 @@ impl Renderer {
             .expect("could not open a graphics adapter");
 
         let physical_device = adapter.physical_device;
+        let device = Arc::new(device);
         let memory_props = physical_device.memory_properties();
+        let services = Services::new(device.clone(), memory_props.clone());
         let mut renderer = Renderer {
             physical_device,
             device,
             queues,
-            _memory_props: memory_props,
+            memory_props,
+            services,
             windows: Vec::with_capacity(windows.len()),
         };
         renderer.windows = windows
