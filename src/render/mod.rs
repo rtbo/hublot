@@ -1,5 +1,7 @@
 use crate::gfx;
+use crate::Transform;
 use gfx_hal::{self as hal, Device, Instance, PhysicalDevice, QueueFamily, Surface, Swapchain};
+use hal::command::CommandBuffer;
 use hal::format::Format;
 use std::borrow::Borrow;
 use std::sync::{mpsc, Arc};
@@ -137,12 +139,22 @@ fn render_loop(instance: Arc<gfx::Instance>, windows: Vec<WindowInfo>, rx: mpsc:
     renderer.destroy();
 }
 
-trait NodeRenderer {
+struct Context {
+    view_proj: Transform,
+}
+
+trait NodeRenderer<B: hal::Backend> {
     type Node;
 
     fn prerender(&mut self, node: &mut Self::Node);
     fn prerender_end(&mut self);
-    fn render(&mut self, node: &mut Self::Node);
+    fn render<'a>(
+        &mut self,
+        node: &mut Self::Node,
+        context: &Context,
+        model: &Transform,
+        cmd: &mut hal::command::RenderPassInlineEncoder<'a, B>,
+    );
     fn post_render(&mut self);
 }
 
