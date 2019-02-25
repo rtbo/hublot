@@ -2,10 +2,14 @@ use gfx_hal as hal;
 use hal::buffer;
 use hal::device;
 use hal::image;
+use hal::mapping;
 use hal::memory;
 
 use std::fmt::Debug;
-use std::ops::{Deref, Range};
+use std::mem;
+use std::ops::{Bound, Deref, Range, RangeBounds};
+use std::ptr;
+use std::slice;
 use std::sync::{Arc, Mutex};
 
 use hal::Device;
@@ -172,6 +176,54 @@ impl Default for AllocOptions {
     }
 }
 
+/// A memory map
+pub struct Map {
+    ptr: *mut u8,
+    range: Range<u64>,
+}
+
+impl Map {
+    /// Access the data in the map
+    pub fn data(&self) -> &[u8] {
+        let len = self.range.end - self.range.start;
+        unsafe { slice::from_raw_parts(self.ptr.offset(self.range.start as _), len as _) }
+    }
+
+    /// Access mutably the data in the map
+    pub fn data_mut(&mut self) -> &mut [u8] {
+        let len = self.range.end - self.range.start;
+        unsafe { slice::from_raw_parts_mut(self.ptr.offset(self.range.start as _), len as _) }
+    }
+
+    /// Access typed data in the map
+    pub fn view<T>(&self, offset: u64, len: usize) -> &[T] {
+        let sz = self.range.end - self.range.start;
+        assert!(offset as usize + len * mem::size_of::<T>() <= sz as usize);
+
+        unsafe {
+            let ptr = self
+                .ptr
+                .offset((offset as usize + self.range.start as usize) as _)
+                as *const T;
+            slice::from_raw_parts(ptr, len)
+        }
+    }
+
+    /// Access mutably typed data in the map
+    pub fn view_mut<T>(&self, offset: u64, len: usize) -> &mut [T] {
+        let sz = self.range.end - self.range.start;
+        assert!(offset as usize + len * mem::size_of::<T>() <= sz as usize);
+
+        unsafe {
+            let ptr = self
+                .ptr
+                .offset((offset as usize + self.range.start as usize) as _)
+                as *mut T;
+            slice::from_raw_parts_mut(ptr, len)
+        }
+    }
+}
+
 /// A memory allocation
 pub trait MemAlloc<B: hal::Backend>: Debug {
     /// Access underlying device memory
@@ -183,15 +235,103 @@ pub trait MemAlloc<B: hal::Backend>: Debug {
         let r = self.range();
         r.end - r.start
     }
+    /// Get the number of active maps for this alloc
+    fn map_count(&self) -> usize;
+    /// Get a memory map from this allocation
+    unsafe fn map<R: RangeBounds<u64>>(&self, range: R) -> Result<Map, mapping::Error>;
+    /// Release a memory map
+    unsafe fn unmap(&self, map: Map);
+}
+
+struct RawAlloc<B: hal::Backend> {
+    mem: Arc<B::Memory>,
+    dev: Arc<B::Device>,
+    range: Range<u64>,
+    heap_idx: usize,
+    map: Mutex<(*mut u8, usize)>,
+}
+
+impl<B: hal::Backend> RawAlloc<B> {
+    fn new(res: AllocRes<B>, dev: Arc<B::Device>) -> Self {
+        Self {
+            mem: res.mem,
+            dev,
+            range: res.span,
+            heap_idx: res.heap_idx,
+            map: Mutex::new((ptr::null_mut(), 0)),
+        }
+    }
+
+    fn map_count(&self) -> usize {
+        let map_lock = self.map.lock().unwrap();
+        map_lock.1
+    }
+
+    unsafe fn map<R: RangeBounds<u64>>(&self, range: R) -> Result<Map, mapping::Error> {
+        // range is within the suballoc
+
+        let start = match range.start_bound() {
+            Bound::Unbounded => self.range.start,
+            Bound::Included(&start) => self.range.start + start,
+            Bound::Excluded(_) => panic!("start bound cannot be exclusive!"),
+        };
+
+        let end = match range.end_bound() {
+            Bound::Unbounded => self.range.end,
+            Bound::Excluded(&end) => self.range.end + end,
+            Bound::Included(_) => panic!("end bound cannot be inclusive!"),
+        };
+
+        assert!(start < end && start >= self.range.start && end <= self.range.end);
+
+        let mut map_lock = self.map.lock().unwrap();
+        if map_lock.1 == 0 {
+            map_lock.0 = self.dev.map_memory(&self.mem, ..)?;
+        } else {
+            debug_assert!(!map_lock.0.is_null());
+        }
+        map_lock.1 += 1;
+
+        Ok(Map {
+            ptr: map_lock.0,
+            range: start..end,
+        })
+    }
+
+    unsafe fn unmap(&self, map: Map) {
+        let mut map_lock = self.map.lock().unwrap();
+        assert!(
+            map_lock.0 == map.ptr && !map_lock.0.is_null(),
+            "did not unmap to the right alloc"
+        );
+        debug_assert!(map_lock.1 != 0);
+        map_lock.1 -= 1;
+        if map_lock.1 == 0 {
+            self.dev.unmap_memory(&self.mem);
+            map_lock.0 = ptr::null_mut();
+        }
+    }
+
+    unsafe fn finish(self) -> (Arc<B::Memory>, Range<u64>, usize) {
+        let map_lock = self.map.lock().unwrap();
+        if map_lock.1 != 0 {
+            self.dev.unmap_memory(&self.mem);
+        }
+        (self.mem, self.range, self.heap_idx)
+    }
+}
+
+impl<B: hal::Backend> std::fmt::Debug for RawAlloc<B> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "RawAlloc {{ map_count() == {} }}", self.map_count())
+    }
 }
 
 /// A Buffer memory allocation
 #[derive(Debug)]
 pub struct BufferAlloc<B: hal::Backend> {
     buffer: B::Buffer,
-    mem: Arc<B::Memory>,
-    range: Range<u64>,
-    heap_idx: usize,
+    alloc: RawAlloc<B>,
 }
 
 impl<B: hal::Backend> Deref for BufferAlloc<B> {
@@ -204,10 +344,19 @@ impl<B: hal::Backend> Deref for BufferAlloc<B> {
 
 impl<B: hal::Backend> MemAlloc<B> for BufferAlloc<B> {
     fn mem(&self) -> &B::Memory {
-        &self.mem
+        &self.alloc.mem
     }
     fn range(&self) -> Range<u64> {
-        self.range.clone()
+        self.alloc.range.clone()
+    }
+    fn map_count(&self) -> usize {
+        self.alloc.map_count()
+    }
+    unsafe fn map<R: RangeBounds<u64>>(&self, range: R) -> Result<Map, mapping::Error> {
+        self.alloc.map(range)
+    }
+    unsafe fn unmap(&self, map: Map) {
+        self.alloc.unmap(map);
     }
 }
 
@@ -215,9 +364,7 @@ impl<B: hal::Backend> MemAlloc<B> for BufferAlloc<B> {
 #[derive(Debug)]
 pub struct ImageAlloc<B: hal::Backend> {
     image: B::Image,
-    mem: Arc<B::Memory>,
-    range: Range<u64>,
-    heap_idx: usize,
+    alloc: RawAlloc<B>,
 }
 
 impl<B: hal::Backend> Deref for ImageAlloc<B> {
@@ -230,10 +377,19 @@ impl<B: hal::Backend> Deref for ImageAlloc<B> {
 
 impl<B: hal::Backend> MemAlloc<B> for ImageAlloc<B> {
     fn mem(&self) -> &B::Memory {
-        &self.mem
+        &self.alloc.mem
     }
     fn range(&self) -> Range<u64> {
-        self.range.clone()
+        self.alloc.range.clone()
+    }
+    fn map_count(&self) -> usize {
+        self.alloc.map_count()
+    }
+    unsafe fn map<R: RangeBounds<u64>>(&self, range: R) -> Result<Map, mapping::Error> {
+        self.alloc.map(range)
+    }
+    unsafe fn unmap(&self, map: Map) {
+        self.alloc.unmap(map);
     }
 }
 
@@ -374,22 +530,18 @@ impl<B: hal::Backend> Allocator<B> {
 
         Ok(BufferAlloc {
             buffer,
-            mem: res.mem,
-            range: res.span,
-            heap_idx: res.heap_idx,
+            alloc: RawAlloc::new(res, self.device.clone()),
         })
     }
 
     /// Free a buffer allocated with this allocator
     pub unsafe fn free_buffer(&self, buffer: BufferAlloc<B>) {
-        let BufferAlloc {
-            buffer,
-            mem,
-            range,
-            heap_idx,
-        } = buffer;
+        let BufferAlloc { buffer, alloc, .. } = buffer;
+
+        let (mem, range, heap_idx) = alloc.finish();
 
         self.device.destroy_buffer(buffer);
+
         let mut pool = self.pools[heap_idx].lock().unwrap();
         pool.free(mem, range.start);
     }
@@ -415,22 +567,18 @@ impl<B: hal::Backend> Allocator<B> {
 
         Ok(ImageAlloc {
             image,
-            mem: res.mem,
-            range: res.span,
-            heap_idx: res.heap_idx,
+            alloc: RawAlloc::new(res, self.device.clone()),
         })
     }
 
     /// Free a buffer allocated with this allocator
     pub unsafe fn free_image(&self, image: ImageAlloc<B>) {
-        let ImageAlloc {
-            image,
-            mem,
-            range,
-            heap_idx,
-        } = image;
+        let ImageAlloc { image, alloc, .. } = image;
+
+        let (mem, range, heap_idx) = alloc.finish();
 
         self.device.destroy_image(image);
+
         let mut pool = self.pools[heap_idx].lock().unwrap();
         pool.free(mem, range.start);
     }
