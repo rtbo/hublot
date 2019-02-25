@@ -90,6 +90,28 @@ impl Transform {
             y * self[(1, 0)], y * self[(1, 1)], y * self[(1, 2)],
         )
     }
+
+    #[rustfmt::skip]
+    #[inline(always)]
+    pub fn to_4x4_col_major(&self) -> [f32; 16] {
+        [
+            self[0][0], self[1][0], 0f32, 0f32,
+            self[0][1], self[1][1], 0f32, 0f32,
+            0f32, 0f32, 1f32, 0f32,
+            self[0][2], self[1][2], 0f32, 1f32,
+        ]
+    }
+
+    #[rustfmt::skip]
+    #[inline(always)]
+    pub fn to_4x4_row_major(&self) -> [f32; 16] {
+        [
+            self[0][0], self[0][1], 0f32, self[0][2],
+            self[1][0], self[1][1], 0f32, self[1][2],
+            0f32, 0f32, 1f32, 0f32,
+            0f32, 0f32, 0f32, 1f32,
+        ]
+    }
 }
 
 impl Index<usize> for Transform {
@@ -163,4 +185,8 @@ impl Mul<FPoint> for Transform {
             self[1][0] * rhs.0 + self[1][1] * rhs.1 + self[1][2],
         )
     }
+}
+
+pub fn dot(lhs: [f32; 2], rhs: [f32; 2]) -> f32 {
+    lhs[0] * rhs[0] + lhs[1] * rhs[1]
 }
