@@ -8,6 +8,8 @@ extern crate bitflags;
 extern crate downcast_rs;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate log;
 
 pub mod color;
 pub mod event_loop;

@@ -10,4 +10,5 @@ downcast-rs = "1.0.3"
 gfx-hal = "0.1"
 gfx-backend-vulkan = "0.1"
 lazy_static = "1.2.0"
+log = "0.4.0"
 winit = { version="0.18.1" }
