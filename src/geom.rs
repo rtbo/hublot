@@ -1,4 +1,4 @@
-use std::ops::{Add, Index, IndexMut, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Sub};
 
 pub type FPoint = Point<f32>;
 pub type IPoint = Point<i32>;
@@ -173,6 +173,8 @@ impl<T> Rect<T>
 where
     T: Copy,
     T: Add<Output = T>,
+    T: Div<Output = T>,
+    T: From<i16>,
 {
     pub fn new(x: T, y: T, width: T, height: T) -> Rect<T> {
         Rect {
@@ -225,6 +227,25 @@ where
     pub fn bottom(&self) -> T {
         self.y + self.height
     }
+    pub fn top_left(&self) -> Point<T> {
+        Point(self.x, self.y)
+    }
+    pub fn top_right(&self) -> Point<T> {
+        Point(self.x + self.width, self.y)
+    }
+    pub fn bottom_left(&self) -> Point<T> {
+        Point(self.x, self.y + self.height)
+    }
+    pub fn bottom_right(&self) -> Point<T> {
+        Point(self.x + self.width, self.y + self.height)
+    }
+    pub fn center(&self) -> Point<T> {
+        Point(self.x + self.width / From::from(2), self.y + self.height / From::from(2))
+    }
+}
+
+impl FRect
+{
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -257,9 +278,45 @@ impl From<FMargins> for [f32; 4] {
     }
 }
 
+impl From<f32> for FMargins {
+    fn from(val: f32) -> FMargins {
+        Margins (val, val, val, val)
+    }
+}
+
+impl From<[f32; 2]> for FMargins {
+    fn from(val: [f32; 2]) -> FMargins {
+        Margins (val[0], val[1], val[0], val[1])
+    }
+}
+
+impl From<[f32; 3]> for FMargins {
+    fn from(val: [f32; 3]) -> FMargins {
+        Margins (val[0], val[1], val[2], val[1])
+    }
+}
+
 impl From<IMargins> for [i32; 4] {
     fn from(val: IMargins) -> Self {
         [val.0, val.1, val.2, val.3]
+    }
+}
+
+impl From<i32> for IMargins {
+    fn from(val: i32) -> IMargins {
+        Margins (val, val, val, val)
+    }
+}
+
+impl From<[i32; 2]> for IMargins {
+    fn from(val: [i32; 2]) -> IMargins {
+        Margins (val[0], val[1], val[0], val[1])
+    }
+}
+
+impl From<[i32; 3]> for IMargins {
+    fn from(val: [i32; 3]) -> IMargins {
+        Margins (val[0], val[1], val[2], val[1])
     }
 }
 
